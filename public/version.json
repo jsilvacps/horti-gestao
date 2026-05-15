@@ -1,5 +1,5 @@
 {
-  "version": "1.1.9",
-  "notas": "- Auto-update funcionando corretamente\n- Todas correções anteriores incluídas",
-  "download": "https://github.com/jsilvacps/horti-gestao/releases/download/v1.1.9/HortiGestao-PDV-Setup-1.1.9.exe"
+  "version": "1.1.10",
+  "notas": "- Correção ao cancelar item (coluna de preço detectada automaticamente)\n- Auto-update corrigido definitivamente",
+  "download": "https://github.com/jsilvacps/horti-gestao/releases/download/v1.1.10/HortiGestao-PDV-Setup-1.1.10.exe"
 }
