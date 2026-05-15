@@ -599,11 +599,11 @@ export default function PDVPage() {
       `Cancelar "${item.produto.nome}" — ${item.quantidade} × ${moedaBR(item.precoUnitario)}?`,
       async () => {
         const { error: errIns } = await supabase.from("itens_cancelados").insert([{
-          operador:      nomeOperador,
-          produto_nome:  item.produto.nome,
-          quantidade:    item.quantidade,
-          total:         item.quantidade * item.precoUnitario,
-          motivo:        "Cancelado pelo operador no PDV",
+          operador:     nomeOperador,
+          produto_nome: item.produto.nome,
+          quantidade:   item.quantidade,
+          preco:        item.precoUnitario,
+          motivo:       "Cancelado pelo operador no PDV",
         }]);
         if (errIns) {
           setMensagem(`⚠️ Erro ao registrar cancelamento: ${errIns.message}`);
@@ -2364,8 +2364,8 @@ ${rod}
               ) : abaRelatorio === "itens" ? (
                 <TabelaRelatorio
                   dados={relItens}
-                  colunas={["Data/Hora", "Operador", "Produto", "Qtd", "Total"]}
-                  renderLinha={(r) => [fmtHora(r.created_at), r.operador || "—", r.produto_nome || "—", String(r.quantidade ?? "—"), moedaBR(r.total || 0)]}
+                  colunas={["Data/Hora", "Operador", "Produto", "Qtd", "Preço unit."]}
+                  renderLinha={(r) => [fmtHora(r.created_at), r.operador || "—", r.produto_nome || "—", String(r.quantidade ?? "—"), r.preco != null ? moedaBR(r.preco) : "—"]}
                   vazio="Nenhum item cancelado."
                 />
               ) : abaRelatorio === "sangrias" ? (

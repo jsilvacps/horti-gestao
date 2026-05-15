@@ -1,5 +1,5 @@
 {
-  "version": "1.1.5",
-  "notas": "- Diagnóstico de erros nos relatórios (mostra mensagem se tabela não acessível)\n- Botão Recarregar nos relatórios\n- Erros de sangria e cancelamento agora aparecem na tela",
-  "download": "https://github.com/jsilvacps/horti-gestao/releases/download/v1.1.5/HortiGestao-PDV-Setup-1.1.5.exe"
+  "version": "1.1.6",
+  "notas": "- Correção do erro ao cancelar item (coluna 'total' inexistente no Supabase)\n- Relatório de itens cancelados mostra preço unitário",
+  "download": "https://github.com/jsilvacps/horti-gestao/releases/download/v1.1.6/HortiGestao-PDV-Setup-1.1.6.exe"
 }
