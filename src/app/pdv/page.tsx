@@ -666,8 +666,11 @@ export default function PDVPage() {
       r = await supabase.from("sangrias").insert([{ operador: nomeOperador, valor }]);
     }
     if (r.error) {
-      setMensagem(`⚠️ Erro ao registrar sangria: ${r.error.message}`);
-      setTimeout(() => setMensagem(""), 8000);
+      const msg = r.error.message.toLowerCase().includes("row-level security") || r.error.message.toLowerCase().includes("rls")
+        ? "⚠️ Sangria bloqueada pelo Supabase (RLS). No Supabase, execute: ALTER TABLE sangrias DISABLE ROW LEVEL SECURITY;"
+        : `⚠️ Erro ao registrar sangria: ${r.error.message}`;
+      setMensagem(msg);
+      setTimeout(() => setMensagem(""), 10000);
     }
 
     const novoTotal = Math.max(0, totalCaixa - valor);
@@ -2384,8 +2387,12 @@ ${rod}
               ) : abaRelatorio === "itens" ? (
                 <TabelaRelatorio
                   dados={relItens}
-                  colunas={["Data/Hora", "Operador", "Produto", "Qtd", "Preço unit."]}
-                  renderLinha={(r) => [fmtHora(r.created_at), r.operador || "—", r.produto_nome || "—", String(r.quantidade ?? "—"), r.preco != null ? moedaBR(r.preco) : "—"]}
+                  colunas={["Data/Hora", "Operador", "Produto", "Qtd", "Total"]}
+                  renderLinha={(r) => {
+                    const precoUnit = r.preco ?? r.valor ?? 0;
+                    const total = (r.quantidade ?? 0) * precoUnit;
+                    return [fmtHora(r.created_at), r.operador || "—", r.produto_nome || "—", String(r.quantidade ?? "—"), total > 0 ? moedaBR(total) : "—"];
+                  }}
                   vazio="Nenhum item cancelado."
                 />
               ) : abaRelatorio === "sangrias" ? (
