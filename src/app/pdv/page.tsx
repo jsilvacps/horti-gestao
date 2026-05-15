@@ -1702,6 +1702,11 @@ ${rod}
               />
               <BotaoAtalho tecla="ESC"   texto="Fechar janela"   onClick={() => window.close()} />
             </div>
+
+            {/* Versão */}
+            <div style={{ textAlign: "center", marginTop: 6, color: "rgba(255,255,255,.22)", fontSize: 10, letterSpacing: 0.5 }}>
+              Horti Gestão PDV · v{process.env.NEXT_PUBLIC_APP_VERSION || "—"}
+            </div>
           </aside>
         </div>
       </div>
