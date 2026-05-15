@@ -153,6 +153,7 @@ export default function PDVPage() {
   const [relSangrias, setRelSangrias]   = useState<any[]>([]);
   const [relOperadores, setRelOperadores] = useState<any[]>([]);
   const [carregandoRel, setCarregandoRel] = useState(false);
+  const [erroRelatorio, setErroRelatorio] = useState<string | null>(null);
 
   /* ── Fechamento de caixa ── */
   const [modalFechamento, setModalFechamento]   = useState(false);
@@ -597,13 +598,17 @@ export default function PDVPage() {
       "Cancelar item",
       `Cancelar "${item.produto.nome}" — ${item.quantidade} × ${moedaBR(item.precoUnitario)}?`,
       async () => {
-        await supabase.from("itens_cancelados").insert([{
+        const { error: errIns } = await supabase.from("itens_cancelados").insert([{
           operador:      nomeOperador,
           produto_nome:  item.produto.nome,
           quantidade:    item.quantidade,
           total:         item.quantidade * item.precoUnitario,
           motivo:        "Cancelado pelo operador no PDV",
         }]);
+        if (errIns) {
+          setMensagem(`⚠️ Erro ao registrar cancelamento: ${errIns.message}`);
+          setTimeout(() => setMensagem(""), 6000);
+        }
         removerItemDireto(itemId);
       }
     );
@@ -637,11 +642,15 @@ export default function PDVPage() {
     const valor = parseFloat(valorSangria.replace(",", "."));
     if (!valor || valor <= 0) return;
     setSalvandoSangria(true);
-    await supabase.from("sangrias").insert([{
+    const { error: errSangria } = await supabase.from("sangrias").insert([{
       operador:    nomeOperador,
       valor,
       observacao:  obsSangria || null,
     }]);
+    if (errSangria) {
+      setMensagem(`⚠️ Erro ao registrar sangria: ${errSangria.message}`);
+      setTimeout(() => setMensagem(""), 6000);
+    }
     const novoTotal = Math.max(0, totalCaixa - valor);
     setTotalCaixa(novoTotal);
     localStorage.setItem("pdv_total_caixa", String(novoTotal));
@@ -668,17 +677,30 @@ export default function PDVPage() {
     if (exigirPro("relatorios")) return;
     if (!temPerm("perm_relatorios")) { semPermissao("ver relatórios"); return; }
     setModalRelatorios(true);
+    setErroRelatorio(null);
     setCarregandoRel(true);
-    const [{ data: c }, { data: it }, { data: s }, { data: op }] = await Promise.all([
-      supabase.from("cupons_cancelados").select("*").order("created_at", { ascending: false }).limit(50),
-      supabase.from("itens_cancelados").select("*").order("created_at", { ascending: false }).limit(50),
-      supabase.from("sangrias").select("*").order("created_at", { ascending: false }).limit(50),
-      supabase.from("operadores").select("id, nome, username, blocked").order("username", { ascending: true }),
-    ]);
-    setRelCupons(c || []);
-    setRelItens(it || []);
-    setRelSangrias(s || []);
-    setRelOperadores(op || []);
+    try {
+      const [rC, rIt, rS, rOp] = await Promise.all([
+        supabase.from("cupons_cancelados").select("*").order("created_at", { ascending: false }).limit(100),
+        supabase.from("itens_cancelados").select("*").order("created_at", { ascending: false }).limit(100),
+        supabase.from("sangrias").select("*").order("created_at", { ascending: false }).limit(100),
+        supabase.from("operadores").select("id, nome, username, blocked").order("username", { ascending: true }),
+      ]);
+      // Detecta qualquer erro vindo do Supabase
+      const erros = [
+        rC.error  && `cupons_cancelados: ${rC.error.message}`,
+        rIt.error && `itens_cancelados: ${rIt.error.message}`,
+        rS.error  && `sangrias: ${rS.error.message}`,
+        rOp.error && `operadores: ${rOp.error.message}`,
+      ].filter(Boolean);
+      if (erros.length) setErroRelatorio(erros.join(" | "));
+      setRelCupons(rC.data  || []);
+      setRelItens(rIt.data  || []);
+      setRelSangrias(rS.data || []);
+      setRelOperadores(rOp.data || []);
+    } catch (ex: any) {
+      setErroRelatorio(ex?.message || "Erro inesperado ao carregar relatórios");
+    }
     setCarregandoRel(false);
   }
 
@@ -2293,8 +2315,20 @@ ${rod}
           <div style={{ ...modalBox, width: "min(96vw, 820px)", maxHeight: "88vh", display: "flex", flexDirection: "column" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <div style={{ fontWeight: 900, fontSize: 18, color: "#0f172a" }}>📊 Relatórios do Caixa</div>
-              <button type="button" onClick={() => setModalRelatorios(false)} style={{ border: "none", background: "none", fontSize: 22, cursor: "pointer", color: "#475569" }}>×</button>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <button type="button" onClick={abrirRelatorios}
+                  style={{ border: "1px solid #d1d5db", background: "#f9fafb", borderRadius: 8, padding: "4px 12px", fontSize: 13, cursor: "pointer", color: "#374151", fontWeight: 600 }}>
+                  🔄 Recarregar
+                </button>
+                <button type="button" onClick={() => setModalRelatorios(false)} style={{ border: "none", background: "none", fontSize: 22, cursor: "pointer", color: "#475569" }}>×</button>
+              </div>
             </div>
+
+            {erroRelatorio && (
+              <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: 12, color: "#dc2626", fontFamily: "monospace" }}>
+                ⚠️ Erro ao buscar dados: {erroRelatorio}
+              </div>
+            )}
 
             {/* Abas */}
             <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
