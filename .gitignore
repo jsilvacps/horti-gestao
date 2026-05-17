@@ -41,3 +41,9 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+
+# electron build outputs
+/dist-electron/
+/dist-electron-*/
+/dist-electron-build/
+C:/Temp/horti-build/
