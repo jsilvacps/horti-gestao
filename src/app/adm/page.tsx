@@ -555,11 +555,26 @@ export default function AdmPage() {
                     </label>
 
                     {empresa.logo_url ? (
-                      <div style={{ width: 96, height: 96, borderRadius: 18, border: "1px solid #dde3ea", background: "#fff", overflow: "hidden", display: "grid", placeItems: "center" }}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={empresa.logo_url} alt="Prévia da logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ width: 96, height: 96, borderRadius: 18, border: "1px solid #dde3ea", background: "#fff", overflow: "hidden", display: "grid", placeItems: "center", flexShrink: 0 }}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={empresa.logo_url} alt="Prévia da logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => { setEmpresa((prev) => ({ ...prev, logo_url: null })); setLogoNomeArquivo(""); }}
+                          style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 10, padding: "8px 14px", fontWeight: 700, cursor: "pointer", fontSize: 13 }}
+                        >
+                          Remover logo
+                        </button>
                       </div>
-                    ) : null}
+                    ) : (
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/logo.svg" alt="Logo padrão" style={{ width: 64, height: 64, objectFit: "contain", opacity: 0.5 }} />
+                        <span style={{ color: "#6b7280", fontSize: 13 }}>Padrão Horti Gestão</span>
+                      </div>
+                    )}
                   </div>
                 </Field>
 

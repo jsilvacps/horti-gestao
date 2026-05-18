@@ -1424,15 +1424,12 @@ ${rod}
                 padding: 12,
               }}
             >
-              {logoSrc ? (
-                <img
-                  src={logoSrc}
-                  alt="Logo da empresa"
-                  style={{ maxWidth: "100%", maxHeight: 240, objectFit: "contain", filter: "drop-shadow(0 4px 10px rgba(0,0,0,.35))" }}
-                />
-              ) : (
-                <div style={{ color: "rgba(255,255,255,.2)", fontSize: 18, fontWeight: 700 }}>LOGO</div>
-              )}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={logoSrc || "/logo.svg"}
+                alt="Logo da empresa"
+                style={{ maxWidth: "100%", maxHeight: 240, objectFit: "contain", filter: "drop-shadow(0 4px 10px rgba(0,0,0,.35))" }}
+              />
             </div>
           </section>
 
