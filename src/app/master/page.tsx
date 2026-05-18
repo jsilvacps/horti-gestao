@@ -59,7 +59,7 @@ export default function MasterPage() {
     const { data } = await supabase
       .from("clientes_licenciados")
       .select("*")
-      .order("created_at", { ascending: false });
+      .order("empresa_id", { ascending: true });
     setClientes((data as ClienteLicenciado[]) || []);
     setCarregandoClientes(false);
   }, []);
