@@ -1,5 +1,5 @@
 {
-  "version": "1.1.15",
-  "notas": "- Arquitetura multi-tenant: todos os clientes no mesmo banco\n- empresa_id separa dados por cliente automaticamente\n- Código de ativação agora vincula ao empresa_id",
-  "download": "https://github.com/jsilvacps/horti-gestao/releases/download/v1.1.15/HortiGestao-PDV-Setup-1.1.15.exe"
+  "version": "1.1.16",
+  "notas": "- Tela de boas-vindas ao ativar código já configurado\n- Logo padrão Horti Gestão no PDV e ADM\n- Botão remover logo no ADM\n- Fix: código de ativação MASTER2025 e RLS",
+  "download": "https://github.com/jsilvacps/horti-gestao/releases/download/v1.1.16/HortiGestao-PDV-Setup-1.1.16.exe"
 }
