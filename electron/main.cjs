@@ -62,11 +62,32 @@ function log(msg) {
   console.log(msg);
 }
 
+// ── Verifica se a porta está livre ──────────────────────────────────────────
+function isPortFree(port) {
+  return new Promise((resolve) => {
+    const net = require("net");
+    const srv = net.createServer();
+    srv.once("error", () => resolve(false));
+    srv.once("listening", () => { srv.close(); resolve(true); });
+    srv.listen(port, "127.0.0.1");
+  });
+}
+
+// ── Aguarda a porta ficar livre (máx 10 segundos) ────────────────────────────
+async function waitPortFree(port, maxMs = 10000) {
+  const inicio = Date.now();
+  while (Date.now() - inicio < maxMs) {
+    if (await isPortFree(port)) return true;
+    await new Promise((r) => setTimeout(r, 300));
+  }
+  return false;
+}
+
 // ── Mata qualquer processo ocupando a porta (Windows) ───────────────────────
 function killPortProcesses(port) {
   return new Promise((resolve) => {
     const { exec } = require("child_process");
-    exec(`netstat -ano | findstr :${port}`, (err, stdout) => {
+    exec(`netstat -ano | findstr :${port}`, async (err, stdout) => {
       if (err || !stdout.trim()) { resolve(); return; }
       const pids = new Set();
       for (const line of stdout.trim().split("\n")) {
@@ -77,13 +98,14 @@ function killPortProcesses(port) {
       }
       if (pids.size === 0) { resolve(); return; }
       log(`Matando ${pids.size} processo(s) na porta ${port}: ${[...pids].join(", ")}`);
-      let done = 0;
-      for (const pid of pids) {
-        exec(`taskkill /F /PID ${pid}`, () => {
-          done++;
-          if (done === pids.size) setTimeout(resolve, 800); // aguarda SO liberar a porta
-        });
-      }
+      // Mata todos os PIDs
+      await Promise.all([...pids].map((pid) =>
+        new Promise((r) => exec(`taskkill /F /PID ${pid}`, () => r()))
+      ));
+      // Aguarda a porta estar de fato livre (até 10s)
+      const livre = await waitPortFree(port, 10000);
+      log(`Porta ${port} ${livre ? "liberada" : "ainda ocupada após 10s"}`);
+      resolve();
     });
   });
 }
@@ -148,7 +170,17 @@ function startServer() {
     }
 
     proc.stdout?.on("data", (d) => log(`[server] ${d.toString().trim()}`));
-    proc.stderr?.on("data", (d) => log(`[server ERR] ${d.toString().trim()}`));
+    proc.stderr?.on("data", async (d) => {
+      const msg = d.toString().trim();
+      log(`[server ERR] ${msg}`);
+      // Se EADDRINUSE, mata o processo que ainda segura a porta e retenta
+      if (msg.includes("EADDRINUSE") && tentativa < 5) {
+        log(`EADDRINUSE detectado — aguardando porta e retentando...`);
+        proc.kill();
+        await killPortProcesses(PORT);
+        setTimeout(() => tentarSpawn(tentativa + 1), 500);
+      }
+    });
     proc.on("exit", (code) => log(`[server EXIT] code=${code}`));
     proc.on("error", (err) => {
       log(`[server CRASH] ${err.message} (code=${err.code})`);
