@@ -47,3 +47,4 @@ next-env.d.ts
 /dist-electron-*/
 /dist-electron-build/
 C:/Temp/horti-build/
+.claude/
