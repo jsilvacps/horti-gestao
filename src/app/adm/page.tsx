@@ -502,36 +502,36 @@ export default function AdmPage() {
         <HeaderCebolao />
 
         <section style={{ ...card, marginBottom: 18 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center", marginBottom: 14 }}>
             <div>
               <div style={title}>ADM</div>
               <div style={subtitle}>Configurações completas do sistema.</div>
             </div>
-            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-              <button onClick={abrirCaixaPDV} style={{ padding: "9px 20px", borderRadius: 8, border: "none", background: "#16a34a", color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
+            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+              <button onClick={abrirCaixaPDV} style={{ padding: isMobile ? "12px 18px" : "9px 20px", borderRadius: 10, border: "none", background: "#16a34a", color: "#fff", fontWeight: 700, fontSize: isMobile ? 15 : 14, cursor: "pointer" }}>
                 🖥️ Abrir Caixa (PDV)
               </button>
-              <button onClick={sair} style={lightButton}>Sair do ADM</button>
+              <button onClick={sair} style={{ ...lightButton, fontSize: isMobile ? 15 : 16, height: isMobile ? 46 : 42 }}>Sair do ADM</button>
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, WebkitOverflowScrolling: "touch" } as React.CSSProperties}>
             {[
-              ["config", "Configuração da empresa"],
-              ["cupom", "🖨️ Cupom Fiscal"],
-              ["operadores", "Operadores"],
-              ["relatorios", "Relatórios"],
-              ["etiquetas", "Etiquetas"],
-              ["senhas", "Senhas operacionais"],
+              ["config", "⚙️ Empresa"],
+              ["cupom", "🖨️ Cupom"],
+              ["operadores", "👤 Operadores"],
+              ["relatorios", "📊 Relatórios"],
+              ["etiquetas", "🏷️ Etiquetas"],
+              ["senhas", "🔒 Senhas"],
               ...(isDev ? [["licencas", "🔑 Licenças"]] : []),
             ].map(([key, labelText]) => (
-              <button key={key} onClick={() => setAba(key)} style={{ ...tabBtn, background: aba === key ? "#1fb14e" : "#fff", color: aba === key ? "#fff" : "#223042" }}>
+              <button key={key} onClick={() => setAba(key)} style={{ ...tabBtn, background: aba === key ? "#1fb14e" : "#fff", color: aba === key ? "#fff" : "#223042", whiteSpace: "nowrap", flexShrink: 0 }}>
                 {labelText}
               </button>
             ))}
             <button
               onClick={() => router.push("/produtos")}
-              style={{ ...tabBtn, background: "#fff", color: "#223042" }}
+              style={{ ...tabBtn, background: "#fff", color: "#223042", whiteSpace: "nowrap", flexShrink: 0 }}
             >
               📦 Produtos
             </button>
@@ -1287,14 +1287,15 @@ const filterGrid: React.CSSProperties = {
 
 const input: React.CSSProperties = {
   width: "100%",
-  height: 46,
+  height: 48,
   borderRadius: 14,
   border: "1px solid #d5dde7",
   padding: "0 16px",
-  fontSize: 15,
+  fontSize: 16,
   color: "#243447",
   background: "#fff",
   outline: "none",
+  boxSizing: "border-box",
 };
 
 const saveButton: React.CSSProperties = {
