@@ -6,8 +6,14 @@
  */
 
 // Dexie só funciona no browser — importação dinâmica protege o SSR do Next.js
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const Dexie = typeof window !== "undefined" ? require("dexie").default ?? require("dexie") : null;
+let Dexie: (new (name: string) => import("dexie").Dexie) | null = null;
+if (typeof window !== "undefined") {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const mod = require("dexie");
+    Dexie = mod.default ?? mod;
+  } catch { Dexie = null; }
+}
 type DexieType = import("dexie").Dexie;
 type TableType<T> = import("dexie").Table<T>;
 
@@ -50,5 +56,9 @@ class HortiDB extends (Dexie as unknown as new (name: string) => DexieType) {
   }
 }
 
-export const localDB: HortiDB | null =
-  typeof window !== "undefined" ? new HortiDB() : null;
+function criarLocalDB(): HortiDB | null {
+  if (typeof window === "undefined" || !Dexie) return null;
+  try { return new HortiDB(); } catch { return null; }
+}
+
+export const localDB: HortiDB | null = criarLocalDB();

@@ -1,5 +1,5 @@
 {
-  "version": "1.1.19",
-  "notas": "- Fix: Application error ao carregar o app\n- Fix: race condition na verificação de porta livre\n- Login page com tratamento de erro de rede",
-  "download": "https://github.com/jsilvacps/horti-gestao/releases/download/v1.1.19/HortiGestao-PDV-Setup-1.1.19.exe"
+  "version": "1.1.20",
+  "notas": "- Fix: Application error apos login no PDV\n- localDB/Dexie com tratamento de erro robusto\n- Log de erros JS do renderer gravado em arquivo",
+  "download": "https://github.com/jsilvacps/horti-gestao/releases/download/v1.1.20/HortiGestao-PDV-Setup-1.1.20.exe"
 }
