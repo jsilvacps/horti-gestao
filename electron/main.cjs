@@ -292,26 +292,46 @@ function baixarEInstalar(urlDownload, versao) {
 
           log(`Download concluído: ${destino}`);
 
-          // 1) Mata TODOS os processos na porta (incluindo instâncias anteriores
-          //    que ficaram rodando), libera locks de arquivo do standalone/
+          // 1) Mata o servidor Next.js
           if (serverProc) {
             try { serverProc.kill(); } catch {}
             serverProc = null;
           }
-          // killPortProcesses já aguarda 800ms internamente para o OS liberar a porta
-          killPortProcesses(PORT).then(() => {
-            const proc = spawn(destino, [], {
-              detached: true,
-              stdio: "ignore",
-            });
-            proc.unref();
-            proc.on("error", (err) => {
-              log(`[installer ERROR] ${err.message}`);
-              dialog.showErrorBox("Erro ao instalar", `Não foi possível iniciar o instalador:\n${err.message}\n\nO arquivo foi salvo em:\n${destino}`);
-            });
-            // Sai imediatamente — o instalador oneClick instala e relança o app
-            app.exit(0);
-          });
+
+          // 2) Cria um .bat que:
+          //    - Aguarda o Horti Gestão PDV.exe fechar (não fica mais na lista de processos)
+          //    - Depois executa o instalador silenciosamente
+          //    - Se auto-apaga
+          const os2 = require("os");
+          const exeName = path.basename(process.execPath); // "Horti Gestão PDV.exe"
+          const batPath = path.join(os2.tmpdir(), "horti-update.bat");
+          const bat = [
+            "@echo off",
+            "setlocal",
+            ":aguarda",
+            `tasklist /FI "IMAGENAME eq ${exeName}" 2>NUL | find /I /N "${exeName}" >NUL`,
+            "if not ERRORLEVEL 1 (",
+            "  timeout /T 1 /NOBREAK >NUL",
+            "  goto aguarda",
+            ")",
+            `start "" /WAIT "${destino}"`,
+            `del "%~f0"`,
+          ].join("\r\n");
+
+          try { fs.writeFileSync(batPath, bat, "utf8"); } catch (e) {
+            log(`[update] Erro ao criar bat: ${e.message}`);
+          }
+
+          // 3) Lança o .bat desanexado e fecha o app
+          log(`[update] Lançando bat de atualização: ${batPath}`);
+          spawn("cmd.exe", ["/c", batPath], {
+            detached: true,
+            stdio: "ignore",
+            windowsHide: true,
+          }).unref();
+
+          // 4) Sai do app — o bat aguarda o .exe fechar, aí roda o installer
+          setTimeout(() => app.exit(0), 800);
         });
       });
 
