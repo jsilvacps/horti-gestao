@@ -1,5 +1,5 @@
 {
-  "version": "1.1.23",
-  "notas": "- Fix: aba Produtos visivel novamente no menu do ADM\n- Fix: captura de erros React via console.error no preload",
-  "download": "https://github.com/jsilvacps/horti-gestao/releases/download/v1.1.23/HortiGestao-PDV-Setup-1.1.23.exe"
+  "version": "1.1.24",
+  "notas": "- Novo: envio de boas-vindas via WhatsApp ao cadastrar cliente no Master\n- Fix: aba Produtos visivel no menu do ADM",
+  "download": "https://github.com/jsilvacps/horti-gestao/releases/download/v1.1.24/HortiGestao-PDV-Setup-1.1.24.exe"
 }
