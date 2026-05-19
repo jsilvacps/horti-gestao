@@ -1,5 +1,5 @@
 {
-  "version": "1.1.22",
-  "notas": "- Fix: captura de erros React via console.error no preload para diagnostico\n- Erros do renderer aparecem em horti-server.log como [CONSOLE_ERROR]",
-  "download": "https://github.com/jsilvacps/horti-gestao/releases/download/v1.1.22/HortiGestao-PDV-Setup-1.1.22.exe"
+  "version": "1.1.23",
+  "notas": "- Fix: aba Produtos visivel novamente no menu do ADM\n- Fix: captura de erros React via console.error no preload",
+  "download": "https://github.com/jsilvacps/horti-gestao/releases/download/v1.1.23/HortiGestao-PDV-Setup-1.1.23.exe"
 }
