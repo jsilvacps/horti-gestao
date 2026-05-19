@@ -49,9 +49,11 @@ export default function MasterPage() {
   const [carregandoClientes, setCarregandoClientes] = useState(false);
   const [msgCliente, setMsgCliente] = useState("");
   const [nomeCliente, setNomeCliente] = useState("");
-  const [codigoCliente, setCodigoCliente] = useState("");
+  const [codigoCliente, setCodigoCliente] = useState(() => Math.random().toString(36).slice(2, 8).toUpperCase());
+  const [telefoneCliente, setTelefoneCliente] = useState("");
   const [criandoCliente, setCriandoCliente] = useState(false);
   const [clienteCriado, setClienteCriado] = useState<ClienteLicenciado | null>(null);
+  const [telefoneCriado, setTelefoneCriado] = useState("");
   const [buscaCliente, setBuscaCliente] = useState("");
 
   const carregarClientes = useCallback(async () => {
@@ -63,6 +65,33 @@ export default function MasterPage() {
     setClientes((data as ClienteLicenciado[]) || []);
     setCarregandoClientes(false);
   }, []);
+
+  function gerarCodigoAuto() {
+    setCodigoCliente(Math.random().toString(36).slice(2, 8).toUpperCase());
+  }
+
+  function montarMsgWhatsApp(nome: string, codigo: string) {
+    return (
+      `Olá, *${nome}*! 🌿\n\n` +
+      `Seja bem-vindo(a) ao *Horti Gestão PDV*!\n\n` +
+      `Seu sistema está pronto para uso. Veja suas informações de acesso:\n\n` +
+      `🔑 *Código de ativação:* \`${codigo}\`\n\n` +
+      `🌐 *Acesse pelo navegador:*\n` +
+      `https://horti-gestao.vercel.app/login\n\n` +
+      `📱 *Como começar:*\n` +
+      `1. Abra o link acima no celular ou computador\n` +
+      `2. Digite o código de ativação\n` +
+      `3. Configure seu estabelecimento e comece a vender!\n\n` +
+      `Qualquer dúvida estou à disposição. 😊`
+    );
+  }
+
+  function abrirWhatsApp(telefone: string, nome: string, codigo: string) {
+    const fone = telefone.replace(/\D/g, "");
+    const numero = fone.startsWith("55") ? fone : `55${fone}`;
+    const texto = encodeURIComponent(montarMsgWhatsApp(nome, codigo));
+    window.open(`https://wa.me/${numero}?text=${texto}`, "_blank");
+  }
 
   async function criarCliente(e: React.FormEvent) {
     e.preventDefault();
@@ -91,7 +120,10 @@ export default function MasterPage() {
       setMsgCliente(`Erro: ${error.message.includes("unique") ? "Código já existe. Use outro código." : error.message}`);
     } else {
       setClienteCriado(data as ClienteLicenciado);
-      setCodigoCliente(""); setNomeCliente("");
+      setTelefoneCriado(telefoneCliente);
+      setNomeCliente("");
+      setTelefoneCliente("");
+      gerarCodigoAuto();
       setMsgCliente("");
       carregarClientes();
     }
@@ -271,28 +303,41 @@ export default function MasterPage() {
             <div style={{ background: "#161e2b", border: "1px solid #1f2d3d", borderRadius: 16, padding: "22px 24px", marginBottom: 24 }}>
               <div style={{ fontWeight: 900, fontSize: 17, color: "#f0fdf4", marginBottom: 16 }}>➕ Cadastrar novo cliente</div>
               <form onSubmit={criarCliente} style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
-                <div style={{ flex: 1, minWidth: 200 }}>
+                <div style={{ flex: "1 1 200px" }}>
                   <label style={lbl}>Nome do cliente *</label>
                   <input value={nomeCliente} onChange={e => setNomeCliente(e.target.value)} placeholder="Ex: João da Silva" style={inp} />
                 </div>
-                <div style={{ flex: 1, minWidth: 200 }}>
+                <div style={{ flex: "1 1 160px" }}>
                   <label style={lbl}>Código de ativação *</label>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <input
+                      value={codigoCliente}
+                      onChange={e => setCodigoCliente(e.target.value.toUpperCase().replace(/\s/g, ""))}
+                      placeholder="Ex: JOAO2025"
+                      style={{ ...inp, letterSpacing: 2, fontWeight: 800 }}
+                    />
+                    <button
+                      type="button"
+                      onClick={gerarCodigoAuto}
+                      style={{ ...btnCinza, padding: "0 10px", flexShrink: 0 }}
+                      title="Gerar código aleatório"
+                    >
+                      🎲
+                    </button>
+                  </div>
+                </div>
+                <div style={{ flex: "1 1 180px" }}>
+                  <label style={lbl}>WhatsApp do cliente</label>
                   <input
-                    value={codigoCliente}
-                    onChange={e => setCodigoCliente(e.target.value.toUpperCase().replace(/\s/g, ""))}
-                    placeholder="Ex: JOAO2025"
-                    style={{ ...inp, letterSpacing: 2, fontWeight: 800 }}
+                    value={telefoneCliente}
+                    onChange={e => setTelefoneCliente(e.target.value.replace(/\D/g, ""))}
+                    placeholder="Ex: 11999998888"
+                    inputMode="tel"
+                    maxLength={15}
+                    style={inp}
                   />
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setCodigoCliente(Math.random().toString(36).slice(2, 8).toUpperCase())}
-                  style={{ ...btnCinza, height: 42, alignSelf: "flex-end" }}
-                  title="Gerar código aleatório"
-                >
-                  🎲 Auto
-                </button>
-                <button type="submit" disabled={criandoCliente} style={{ ...btnVerde, height: 42, alignSelf: "flex-end" }}>
+                <button type="submit" disabled={criandoCliente} style={{ ...btnVerde, height: 42, alignSelf: "flex-end", flexShrink: 0 }}>
                   {criandoCliente ? "Criando..." : "✔ Criar cliente"}
                 </button>
               </form>
@@ -303,22 +348,50 @@ export default function MasterPage() {
 
               {clienteCriado && (
                 <div style={{ marginTop: 18, background: "#0a1a0f", border: "1px solid #16a34a44", borderRadius: 10, padding: 16 }}>
-                  <div style={{ color: "#86efac", fontWeight: 700, marginBottom: 10, fontSize: 14 }}>
-                    ✅ Cliente criado! Envie o código abaixo:
+                  <div style={{ color: "#86efac", fontWeight: 700, marginBottom: 12, fontSize: 15 }}>
+                    ✅ Cliente criado com sucesso!
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <code style={{ background: "#0f2a16", color: "#4ade80", padding: "8px 16px", borderRadius: 8, fontSize: 20, fontWeight: 900, letterSpacing: 3 }}>
-                      {clienteCriado.codigo}
-                    </code>
-                    <button
-                      onClick={() => navigator.clipboard.writeText(clienteCriado.codigo)}
-                      style={btnCinza}
-                    >
-                      📋 Copiar código
-                    </button>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
+                    <div>
+                      <div style={{ color: "#64748b", fontSize: 11, marginBottom: 4 }}>CÓDIGO DE ATIVAÇÃO</div>
+                      <code style={{ background: "#0f2a16", color: "#4ade80", padding: "10px 18px", borderRadius: 8, fontSize: 22, fontWeight: 900, letterSpacing: 3, display: "block" }}>
+                        {clienteCriado.codigo}
+                      </code>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      <button onClick={() => navigator.clipboard.writeText(clienteCriado.codigo)} style={btnCinza}>
+                        📋 Copiar código
+                      </button>
+                      {telefoneCriado && (
+                        <button
+                          onClick={() => abrirWhatsApp(telefoneCriado, clienteCriado.nome_cliente || "Cliente", clienteCriado.codigo)}
+                          style={{ ...btnVerde, background: "#16a34a", fontSize: 14, padding: "9px 16px" }}
+                        >
+                          💬 Enviar boas-vindas via WhatsApp
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div style={{ color: "#475569", fontSize: 12, marginTop: 8 }}>
-                    empresa_id: {clienteCriado.empresa_id} · cliente: {clienteCriado.nome_cliente}
+                  {!telefoneCriado && (
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 4 }}>
+                      <input
+                        placeholder="Digite o WhatsApp para enviar mensagem"
+                        inputMode="tel"
+                        maxLength={15}
+                        onChange={e => setTelefoneCriado(e.target.value.replace(/\D/g, ""))}
+                        style={{ ...inp, maxWidth: 260 }}
+                      />
+                      <button
+                        disabled={!telefoneCriado}
+                        onClick={() => abrirWhatsApp(telefoneCriado, clienteCriado.nome_cliente || "Cliente", clienteCriado.codigo)}
+                        style={{ ...btnVerde, background: "#16a34a", opacity: telefoneCriado ? 1 : 0.4 }}
+                      >
+                        💬 Enviar via WhatsApp
+                      </button>
+                    </div>
+                  )}
+                  <div style={{ color: "#334155", fontSize: 12, marginTop: 10 }}>
+                    empresa_id: {clienteCriado.empresa_id} · {clienteCriado.nome_cliente}
                   </div>
                 </div>
               )}
@@ -363,8 +436,16 @@ export default function MasterPage() {
                             </span>
                           </td>
                           <td style={{ padding: "10px 10px" }}>
-                            <div style={{ display: "flex", gap: 6 }}>
+                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                               <button onClick={() => navigator.clipboard.writeText(c.codigo)} style={btnMinCinza} title="Copiar código">📋</button>
+                              <button
+                                onClick={() => {
+                                  const fone = prompt(`WhatsApp de ${c.nome_cliente || c.codigo} (somente números, com DDD):`);
+                                  if (fone) abrirWhatsApp(fone, c.nome_cliente || "Cliente", c.codigo);
+                                }}
+                                style={btnMinVerde}
+                                title="Enviar boas-vindas via WhatsApp"
+                              >💬</button>
                               <button onClick={() => toggleCliente(c.id, c.ativo)} style={c.ativo ? btnMinVermelho : btnMinVerde} title={c.ativo ? "Desativar" : "Ativar"}>
                                 {c.ativo ? "🚫" : "✅"}
                               </button>
