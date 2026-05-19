@@ -480,6 +480,7 @@ export default function AdmPage() {
           whatsapp:        supWhatsapp.trim(),
           assunto:         supAssunto,
           mensagem:        supMensagem.trim(),
+          empresa_id:      empresa.empresa_id ?? null,
         }),
       });
       if (res.ok) {

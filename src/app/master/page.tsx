@@ -28,6 +28,18 @@ type ClienteLicenciado = {
   created_at: string;
 };
 
+type Solicitacao = {
+  id: string;
+  empresa_id: number | null;
+  nome: string;
+  estabelecimento: string | null;
+  whatsapp: string | null;
+  assunto: string;
+  mensagem: string;
+  status: "aberto" | "em_atendimento" | "resolvido";
+  created_at: string;
+};
+
 function fmtData(iso: string | null) {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
@@ -42,7 +54,47 @@ export default function MasterPage() {
   const [liberado, setLiberado] = useState(false);
   const [senhaInput, setSenhaInput] = useState("");
   const [erroSenha, setErroSenha] = useState("");
-  const [aba, setAba] = useState<"clientes" | "licencas">("clientes");
+  const [aba, setAba] = useState<"clientes" | "licencas" | "suporte">("clientes");
+
+  // ── Suporte ───────────────────────────────────────────────────────────────
+  const [solicitacoes, setSolicitacoes] = useState<Solicitacao[]>([]);
+  const [supExpandido, setSupExpandido] = useState<string | null>(null);
+  const [supFiltro, setSupFiltro] = useState<"todos" | "aberto" | "em_atendimento" | "resolvido">("todos");
+
+  const carregarSolicitacoes = useCallback(async () => {
+    const { data } = await supabase
+      .from("suporte_solicitacoes")
+      .select("*")
+      .order("created_at", { ascending: false });
+    setSolicitacoes((data as Solicitacao[]) || []);
+  }, []);
+
+  useEffect(() => {
+    if (liberado) carregarSolicitacoes();
+  }, [liberado, carregarSolicitacoes]);
+
+  // Realtime: atualiza inbox ao chegar nova solicitação
+  useEffect(() => {
+    if (!liberado) return;
+    const ch = supabase
+      .channel("suporte-inbox")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "suporte_solicitacoes" }, () => {
+        carregarSolicitacoes();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [liberado, carregarSolicitacoes]);
+
+  async function atualizarStatus(id: string, status: Solicitacao["status"]) {
+    await supabase.from("suporte_solicitacoes").update({ status }).eq("id", id);
+    carregarSolicitacoes();
+  }
+
+  async function excluirSolicitacao(id: string) {
+    if (!confirm("Excluir esta solicitação?")) return;
+    await supabase.from("suporte_solicitacoes").delete().eq("id", id);
+    carregarSolicitacoes();
+  }
 
   // ── Presença em tempo real ────────────────────────────────────────────────
   const [onlineIds, setOnlineIds] = useState<Set<number>>(new Set());
@@ -287,7 +339,7 @@ export default function MasterPage() {
         </div>
 
         {/* Abas */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" }}>
           {([["clientes", "👥 Clientes"], ["licencas", "🔑 Licenças"]] as const).map(([id, label]) => (
             <button key={id} onClick={() => setAba(id)} style={{
               padding: "9px 20px", borderRadius: 10, border: "1px solid",
@@ -297,6 +349,24 @@ export default function MasterPage() {
               fontWeight: 800, fontSize: 14, cursor: "pointer",
             }}>{label}</button>
           ))}
+          <button onClick={() => setAba("suporte")} style={{
+            padding: "9px 20px", borderRadius: 10, border: "1px solid",
+            borderColor: aba === "suporte" ? "#f59e0b" : "#1f2d3d",
+            background: aba === "suporte" ? "#1c1202" : "#161e2b",
+            color: aba === "suporte" ? "#fbbf24" : "#94a3b8",
+            fontWeight: 800, fontSize: 14, cursor: "pointer",
+            display: "flex", alignItems: "center", gap: 8,
+          }}>
+            📬 Suporte
+            {solicitacoes.filter(s => s.status === "aberto").length > 0 && (
+              <span style={{
+                background: "#ef4444", color: "#fff", borderRadius: 999,
+                fontSize: 11, fontWeight: 900, padding: "1px 7px", lineHeight: "18px",
+              }}>
+                {solicitacoes.filter(s => s.status === "aberto").length}
+              </span>
+            )}
+          </button>
         </div>
 
         {/* ── ABA CLIENTES ─────────────────────────────────────────────────── */}
@@ -487,6 +557,130 @@ export default function MasterPage() {
             </div>
           </>
         )}
+
+        {/* ── ABA SUPORTE ──────────────────────────────────────────────────── */}
+        {aba === "suporte" && (() => {
+          const assuntoLabel: Record<string, string> = {
+            duvida: "Dúvida técnica", erro: "Erro no sistema",
+            sugestao: "Sugestão", outro: "Outro",
+          };
+          const statusCfg = {
+            aberto:         { label: "Aberto",         cor: "#ef4444", bg: "#1c0202" },
+            em_atendimento: { label: "Em atendimento", cor: "#f59e0b", bg: "#1c1202" },
+            resolvido:      { label: "Resolvido",      cor: "#4ade80", bg: "#052e16" },
+          };
+          const lista = supFiltro === "todos"
+            ? solicitacoes
+            : solicitacoes.filter(s => s.status === supFiltro);
+
+          return (
+            <>
+              {/* Resumo */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14, marginBottom: 24 }}>
+                {(["aberto","em_atendimento","resolvido"] as const).map(s => (
+                  <div key={s} onClick={() => setSupFiltro(supFiltro === s ? "todos" : s)}
+                    style={{ background: statusCfg[s].bg, border: `1px solid ${statusCfg[s].cor}33`, borderRadius: 14, padding: "18px 22px", cursor: "pointer",
+                      outline: supFiltro === s ? `2px solid ${statusCfg[s].cor}` : "none" }}>
+                    <div style={{ color: statusCfg[s].cor, fontSize: 32, fontWeight: 900 }}>
+                      {solicitacoes.filter(x => x.status === s).length}
+                    </div>
+                    <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 4 }}>{statusCfg[s].label}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ background: "#161e2b", border: "1px solid #1f2d3d", borderRadius: 16, padding: "22px 24px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 10 }}>
+                  <div style={{ fontWeight: 900, fontSize: 17, color: "#f0fdf4" }}>
+                    📬 Solicitações {supFiltro !== "todos" ? `— ${statusCfg[supFiltro as keyof typeof statusCfg].label}` : ""} ({lista.length})
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {supFiltro !== "todos" && (
+                      <button onClick={() => setSupFiltro("todos")} style={btnCinza}>✕ Limpar filtro</button>
+                    )}
+                    <button onClick={carregarSolicitacoes} style={btnCinza}>↻</button>
+                  </div>
+                </div>
+
+                {lista.length === 0 ? (
+                  <div style={{ color: "#475569", textAlign: "center", padding: "40px 0", fontSize: 15 }}>
+                    {supFiltro === "todos" ? "Nenhuma solicitação ainda." : `Nenhuma solicitação com status "${statusCfg[supFiltro as keyof typeof statusCfg].label}".`}
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    {lista.map(s => {
+                      const cfg = statusCfg[s.status] ?? statusCfg.aberto;
+                      const aberto = supExpandido === s.id;
+                      return (
+                        <div key={s.id} style={{ background: "#0f1822", border: `1px solid ${aberto ? cfg.cor + "55" : "#1f2d3d"}`, borderRadius: 14, overflow: "hidden", transition: "border-color .2s" }}>
+                          {/* Cabeçalho */}
+                          <div
+                            onClick={() => setSupExpandido(aberto ? null : s.id)}
+                            style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 18px", cursor: "pointer", flexWrap: "wrap" }}
+                          >
+                            <span style={{ background: cfg.bg, color: cfg.cor, borderRadius: 999, fontSize: 11, fontWeight: 800, padding: "3px 10px", whiteSpace: "nowrap" }}>
+                              {cfg.label}
+                            </span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ color: "#e2e8f0", fontWeight: 700, fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                {s.estabelecimento || s.nome} — <span style={{ color: "#94a3b8", fontWeight: 400 }}>{assuntoLabel[s.assunto] ?? s.assunto}</span>
+                              </div>
+                              <div style={{ color: "#475569", fontSize: 12, marginTop: 2 }}>
+                                {s.nome} · {new Date(s.created_at).toLocaleString("pt-BR")}
+                              </div>
+                            </div>
+                            <span style={{ color: "#475569", fontSize: 18 }}>{aberto ? "▲" : "▼"}</span>
+                          </div>
+
+                          {/* Corpo expandido */}
+                          {aberto && (
+                            <div style={{ borderTop: "1px solid #1f2d3d", padding: "18px 18px" }}>
+                              <div style={{ background: "#0a1118", borderRadius: 10, padding: "14px 16px", color: "#cbd5e1", fontSize: 14, lineHeight: 1.8, whiteSpace: "pre-wrap", marginBottom: 16 }}>
+                                {s.mensagem}
+                              </div>
+
+                              {/* Ações */}
+                              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                                {s.whatsapp && (
+                                  <a
+                                    href={`https://wa.me/55${s.whatsapp.replace(/\D/g,"")}`}
+                                    target="_blank" rel="noreferrer"
+                                    style={{ ...btnVerde, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, padding: "7px 14px" }}
+                                  >
+                                    💬 {s.whatsapp}
+                                  </a>
+                                )}
+
+                                {s.status !== "em_atendimento" && (
+                                  <button onClick={() => atualizarStatus(s.id, "em_atendimento")} style={{ ...btnCinza, color: "#fbbf24", borderColor: "#f59e0b44" }}>
+                                    ⏳ Em atendimento
+                                  </button>
+                                )}
+                                {s.status !== "resolvido" && (
+                                  <button onClick={() => atualizarStatus(s.id, "resolvido")} style={{ ...btnCinza, color: "#4ade80", borderColor: "#22c55e44" }}>
+                                    ✅ Marcar resolvido
+                                  </button>
+                                )}
+                                {s.status !== "aberto" && (
+                                  <button onClick={() => atualizarStatus(s.id, "aberto")} style={{ ...btnCinza, color: "#f87171", borderColor: "#ef444444" }}>
+                                    ↩ Reabrir
+                                  </button>
+                                )}
+                                <button onClick={() => excluirSolicitacao(s.id)} style={{ ...btnCinza, marginLeft: "auto", color: "#f87171" }}>
+                                  🗑️
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </>
+          );
+        })()}
 
         {/* ── ABA LICENÇAS ─────────────────────────────────────────────────── */}
         {aba === "licencas" && (
