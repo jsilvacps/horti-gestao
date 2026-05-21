@@ -1,12 +1,11 @@
 'use client';
 
 /**
- * PresenceTracker — heartbeat a cada 60s no banco de dados.
+ * PresenceTracker — heartbeat via API route a cada 60s.
  * Atualiza `ultimo_acesso` em clientes_licenciados enquanto o app estiver aberto.
- * O Painel Master lê esse campo para exibir online/offline.
  */
 import { useEffect } from 'react';
-import { supabase, getEmpresaId } from '@/lib/supabaseClient';
+import { getEmpresaId } from '@/lib/supabaseClient';
 
 export default function PresenceTracker() {
   useEffect(() => {
@@ -14,13 +13,18 @@ export default function PresenceTracker() {
     if (!empresaId) return;
 
     async function ping() {
-      await supabase
-        .from('clientes_licenciados')
-        .update({ ultimo_acesso: new Date().toISOString() })
-        .eq('empresa_id', empresaId);
+      try {
+        await fetch('/api/ping', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ empresa_id: empresaId }),
+        });
+      } catch {
+        // silencia erros de rede
+      }
     }
 
-    // Primeiro ping imediato
+    // Ping imediato ao abrir qualquer página
     ping();
 
     // Repete a cada 60 segundos
