@@ -26,6 +26,7 @@ type ClienteLicenciado = {
   empresa_id: number;
   ativo: boolean;
   cadastro_em: string | null;
+  ultimo_acesso: string | null;
   created_at: string;
 };
 
@@ -97,21 +98,29 @@ export default function MasterPage() {
     carregarSolicitacoes();
   }
 
-  // ── Presença em tempo real ────────────────────────────────────────────────
+  // ── Presença via heartbeat (ultimo_acesso < 2 min = online) ──────────────
   const [onlineIds, setOnlineIds] = useState<Set<number>>(new Set());
+
+  function calcularOnline(lista: ClienteLicenciado[]) {
+    const limite = Date.now() - 2 * 60 * 1000; // 2 minutos
+    const ids = new Set(
+      lista
+        .filter(c => c.ultimo_acesso && new Date(c.ultimo_acesso).getTime() > limite)
+        .map(c => c.empresa_id)
+    );
+    setOnlineIds(ids);
+  }
 
   useEffect(() => {
     if (!liberado) return;
-    const ch = supabase.channel('horti-presence');
-    ch.on('presence', { event: 'sync' }, () => {
-      const state = ch.presenceState<{ empresa_id: number }>();
-      const ids = new Set(
-        Object.values(state).flat().map((p) => Number(p.empresa_id))
-      );
-      setOnlineIds(ids);
-    });
-    ch.subscribe();
-    return () => { supabase.removeChannel(ch); };
+    // Atualiza os online a cada 30 segundos
+    const timer = setInterval(async () => {
+      const { data } = await supabase
+        .from('clientes_licenciados')
+        .select('empresa_id, ultimo_acesso');
+      if (data) calcularOnline(data as ClienteLicenciado[]);
+    }, 30_000);
+    return () => clearInterval(timer);
   }, [liberado]);
 
   // ── Clientes licenciados ──────────────────────────────────────────────────
@@ -132,8 +141,11 @@ export default function MasterPage() {
       .from("clientes_licenciados")
       .select("*")
       .order("empresa_id", { ascending: true });
-    setClientes((data as ClienteLicenciado[]) || []);
+    const lista = (data as ClienteLicenciado[]) || [];
+    setClientes(lista);
+    calcularOnline(lista);
     setCarregandoClientes(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function gerarCodigoAuto() {

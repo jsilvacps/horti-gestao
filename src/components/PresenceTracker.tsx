@@ -1,10 +1,9 @@
 'use client';
 
 /**
- * PresenceTracker — rastreia a presença do cliente no Supabase Realtime.
- * Incluído no layout raiz: enquanto a página estiver aberta, o empresa_id
- * aparece como "online" no canal 'horti-presence'.
- * Se não houver empresa_id configurado (ex: página master), não faz nada.
+ * PresenceTracker — heartbeat a cada 60s no banco de dados.
+ * Atualiza `ultimo_acesso` em clientes_licenciados enquanto o app estiver aberto.
+ * O Painel Master lê esse campo para exibir online/offline.
  */
 import { useEffect } from 'react';
 import { supabase, getEmpresaId } from '@/lib/supabaseClient';
@@ -14,22 +13,20 @@ export default function PresenceTracker() {
     const empresaId = getEmpresaId();
     if (!empresaId) return;
 
-    const channel = supabase.channel('horti-presence', {
-      config: { presence: { key: `empresa-${empresaId}` } },
-    });
+    async function ping() {
+      await supabase
+        .from('clientes_licenciados')
+        .update({ ultimo_acesso: new Date().toISOString() })
+        .eq('empresa_id', empresaId);
+    }
 
-    channel.subscribe(async (status) => {
-      if (status === 'SUBSCRIBED') {
-        await channel.track({
-          empresa_id: empresaId,
-          online_at: new Date().toISOString(),
-        });
-      }
-    });
+    // Primeiro ping imediato
+    ping();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    // Repete a cada 60 segundos
+    const timer = setInterval(ping, 60_000);
+
+    return () => clearInterval(timer);
   }, []);
 
   return null;
